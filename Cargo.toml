@@ -4,7 +4,13 @@ version = "0.0.1"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
+name = "aftershave_lib"
+path = "src/lib.rs"
+# crate-type = ["cdylib"]
+
+[[bin]]
+name = "aftershave_bin"
+path = "src/main.rs"
 
 [dependencies]
 serde_json = "1.0.140"

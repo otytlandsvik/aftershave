@@ -1,15 +1,15 @@
-use zarrs::group::GroupBuilder;
-use zarrs::array::{ArrayBuilder, DataType, FillValue};
-use zarrs::storage::ReadableWritableListableStorage;
-use zarrs::filesystem::FilesystemStore;
-use std::path::PathBuf;
 use serde_json;
+use std::path::PathBuf;
+use std::sync::Arc;
+use zarrs::array::{ArrayBuilder, DataType, FillValue};
+use zarrs::filesystem::FilesystemStore;
+use zarrs::group::GroupBuilder;
+use zarrs::storage::ReadableWritableListableStorage;
 
-fn create_compressed_archive() -> Result<u8, &'static str> {
+pub fn create_compressed_archive() -> Result<i8, Box<dyn std::error::Error>> {
     // Create a filesystem store
     let store_path: PathBuf = "foo.zarr".into();
-    let store: ReadableWritableListableStorage =
-        Arc::new(FilesystemStore::new(&store_path)?);
+    let store: ReadableWritableListableStorage = Arc::new(FilesystemStore::new(&store_path)?);
 
     // Write the root group metadata
     GroupBuilder::new()
@@ -21,11 +21,14 @@ fn create_compressed_archive() -> Result<u8, &'static str> {
         vec![1337],
         DataType::Int8,
         vec![1337].try_into()?,
-        FillValue::from(0),
+        FillValue::from(0i8),
     )
     .dimension_names(["temp"].into())
     .attributes(
-        serde_json::json!({"Gilette": "The best a man can get"}).as_object().unwrap().clone()
+        serde_json::json!({"Gilette": "The best a man can get"})
+            .as_object()
+            .unwrap()
+            .clone(),
     )
     .build(store.clone(), "/temp")?;
 
@@ -35,12 +38,9 @@ fn create_compressed_archive() -> Result<u8, &'static str> {
 
     // Retrieve a random zero
     let chunk_indices: Vec<u64> = vec![0];
-    let chunk_elements: Vec<u8> = array.retrieve_chunk_elements(&chunk_indices);
+    let chunk_elements: Vec<i8> = array.retrieve_chunk_elements(&chunk_indices)?;
 
-    match chunk_elements {
-        Ok(a) => Ok(a[42]),
-        Err(_e) => Err("Could not retrieve chunk"),
-    }
+    Ok(chunk_elements[0])
 }
 
 #[cfg(test)]
@@ -50,6 +50,9 @@ mod tests {
     #[test]
     fn it_works() {
         let zero = create_compressed_archive();
-        assert_eq!(zero, Ok(0));
+        match zero {
+            Ok(z) => assert_eq!(z, 0),
+            Err(_e) => panic!(),
+        }
     }
 }
